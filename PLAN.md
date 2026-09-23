@@ -36,7 +36,7 @@ Resolution alone never passes. Attractive renders alone never pass.
 
 ## 2. The production line
 
-Each stage lists the worker that does it today, what it must produce, and how the output is accepted. Every node has its own check; nothing moves downstream until it passes. The lead model is not a checkpoint; it is the exception path after two failed corrections.
+Each stage lists the worker that does it today, what it must produce, and how the output is accepted. Every node has its own check; nothing moves downstream until it passes. The lead model is not a checkpoint; it is the exception path when the correction loop in section 4 stops.
 
 | # | Stage | Worker today | Output | Accepted by |
 |---|---|---|---|---|
@@ -67,16 +67,16 @@ flowchart TD
     K["9 Bake + export<br/>check: GLB, fps, first frame, console"]
     L["10 Delivered review<br/>check: blind, detail, tell-tales, Elmer"]
     N["11 Walkthrough / stills / video / source"]
-    O["Lead model<br/>only after two failed corrections"]
+    O["Lead model<br/>only when the correction loop stops"]
 
     A --> B --> C
     C --> E --> I
     C --> F --> I
     C --> G --> I
     I --> K --> L --> N
-    C -. "2 failed corrections" .-> O
-    E -. "2 failed corrections" .-> O
-    L -. "2 failed corrections" .-> O
+    C -. "loop stopped" .-> O
+    E -. "loop stopped" .-> O
+    L -. "loop stopped" .-> O
     O -. "new bounded work order" .-> C
     O -. "new bounded work order" .-> I
 ```
@@ -87,23 +87,40 @@ Human gates are exactly two: **shell accepted** (after stage 4) and **release ac
 
 ### Worker roster
 
-A worker is a role with a written method, limited inputs and outputs, allowed tools and a test that shows it does that one job well. Naming a general model "the materials agent" does not make it a specialist. Incumbents come from the bedroom-A matrix; every row is replaceable through the evaluator procedure in section 6.
+A worker is a role with a written method, limited inputs and outputs, allowed tools and a test that shows it does that one job well. Naming a general model "the materials agent" does not make it a specialist. Every row is replaceable through the evaluator procedure in section 6.
 
-| Role | Incumbent | Boundary |
-|---|---|---|
-| Conductor | Claude Fable in Claude Code, running `conduct.py` | plans, dispatches, re-runs acceptance, merges. Never authors geometry. |
-| Author (Blender recipes, shell, repairs) | Sonnet via headless `claude -p`; Codex Astra when credits allow (`harness.json`, one line) | receives only a hashed HANDOFF note; runs acceptance commands; never grades quality; never calls a network API |
-| Fidelity critic | Gemini 3.8 Flash ×3 (lines 1–3); Gemini 3.1 Pro (line 4 materials, detail crops) | different vendor from the author; sees only a frozen packet; never a camera gate |
-| Experience critic | Opus in fresh context | second opinion on movement, close and reverse views |
-| Conformance reviewer | headless Claude or Codex Astra at max | eleven-item rubric over the note, report, verification record and matrix row; no renders, no chat history |
-| Structured judgement | Jev (TypeSafe) on its four adopted gates: alias, class, height band, handoff-note prose | text only; rejected for evidence-status audit; every new gate must pass the adoption rule |
-| Vision inventory | Gemini 3.8 Flash | observations are evidence-linked proposals, never approvals |
-| Geometry, cloth, bake, render | Blender 5.2 Python, Geometry Nodes, Cycles on Metal | the production machinery; agents write and repair recipes, scripts run them |
-| Bespoke assets | Rodin Gen-2.5 (existing subscription); Tripo and Meshy as challengers | cleaned crops only; `--confirm-spend`; at most two charged attempts per asset |
-| Materials and HDRIs | Poly Haven CC0 + qualified library | reuse an accepted asset only within its tested conditions |
-| Browser delivery | glTF Transform, three.js viewer, `perf.js` | reuse the bedroom-A viewer contract |
+| Role | Primary | Why this one | Boundary |
+|---|---|---|---|
+| Conductor | Claude Fable in Claude Code, running `conduct.py` | Bedroom-A's conductor already works on it; Claude Max is the pool with the most headroom for long sessions; keeps the ChatGPT pool free for authoring | plans, dispatches, re-runs acceptance, merges. Never authors geometry. |
+| Author (Blender recipes, shell, repairs) | Codex Astra (`harness.json` → `codex-astra`) | best-documented procedural Blender author and self-reviewer; strongest published 3D-reconstruction score (BenchCAD, vendor-reported); Elmer's decision | receives only a hashed HANDOFF note; runs acceptance commands; never grades quality; never calls a network API |
+| Fidelity critic | Gemini 3.8 Flash ×3 (lines 1–3); Gemini 3.1 Pro (line 4 materials, detail crops) | on the bedroom-A matrix Flash dominated every other critic on cost, speed and valid answers (US$0.005, 10 s, 77 % consistency); Pro found the most line-4 material defects; different vendor from every author | sees only a frozen packet; never a camera gate |
+| Experience critic | Opus 5.5 in fresh context | strongest reasoning in the Claude pool for judging movement and composition; fresh context guarantees it never saw the build | second opinion on movement, close and reverse views |
+| Conformance reviewer | Codex Astra at max effort; headless Claude as fallback | the rubric is a bounded, one-shot audit of records, which is the shape Astra does well without a monitoring loop | eleven-item rubric over the note, report, verification record and matrix row; no renders, no chat history |
+| Structured judgement | Jev (TypeSafe) on its four adopted gates: alias, class, height band, handoff-note prose | passed the adoption rule on verified truth (0.89–1.00 accuracy); 0.28 s and a fraction of a cent per call | text only; rejected for evidence-status audit; every new gate must pass the adoption rule |
+| Vision inventory | Gemini 3.8 Flash | accepts images and video at low cost; adequate for inventory, not for defect detection | observations are evidence-linked proposals, never approvals |
+| Evidence ledger | Sonnet 5 instrumented (`measure_plan.py`) cross-checked by Gemini Flash with functions | the instrumented path is auditable; the two-estimate rule caught both the 15 % width error and the mirrored ledger | two estimates within 5 % or escalate; metric anchor mandatory |
+| Geometry, cloth, bake, render | Blender 5.2 Python, Geometry Nodes, Cycles on Metal | free, scriptable, the bake runs in 13 s on the M5 Max; no per-asset fee | the production machinery; agents write and repair recipes, scripts run them |
+| Bespoke assets | Rodin Gen-2.5 (existing subscription); Tripo and Meshy as challengers | subscription already paid; multi-image input; failures in bedroom-A were crop hygiene, not the generator | cleaned crops only; `--confirm-spend`; at most two charged attempts per asset |
+| Materials and HDRIs | Poly Haven CC0 + qualified library | zero cost, commercial-safe, physical scale; halved colour error in bedroom-A | reuse an accepted asset only within its tested conditions |
+| Browser delivery | glTF Transform, three.js viewer, `perf.js` | already passes 102 fps and a 730 ms first frame; MIT | reuse the bedroom-A viewer contract |
 
 Open-weights critics (Qwen3-VL, GLM, DeepSeek) made no stack in bedroom-A: cheaper or slower but they miss or return invalid answers. Qwen-Image stays a research candidate until its commercial licence is settled.
+
+### Fallback chain per role
+
+Every model role has an ordered fallback list. The controller moves down the list automatically when the primary is unavailable because its usage window or credits are exhausted, and records the substitution on the attempt. It flags Elmer instead of substituting when the task definition marks the primary as required, or when no fallback has passed the frozen cases for that role.
+
+| Role | 1st | 2nd | 3rd | If none available |
+|---|---|---|---|---|
+| Author | Codex Astra (ChatGPT Pro via Codex) | Opus 5.5 (Claude Max via `claude -p`) | Sonnet 5 (Claude Max; the recorded bedroom-A baseline) | pause the work order; flag Elmer with the task and the pool that ran out |
+| Conductor | Fable (Claude Max) | Opus 5.5 (Claude Max) | Astra in Codex, bounded to the current milestone only | pause; nothing dispatches without a conductor |
+| Fidelity critic | Gemini 3.8 Flash via native key | Gemini 3.8 Flash via OpenRouter | Gemini 3.1 Pro | pause review; never fall back to the author's vendor |
+| Experience critic | Opus 5.5 | Fable | Astra (only when the author is Claude) | skip the second opinion, record it as missing |
+| Conformance | Astra at max | headless Claude (Opus 5.5) | Sonnet 5 | milestone stays "awaiting review" |
+| Structured judgement | Jev | static code path for that gate | escalate the item | the gate reports "no match", never a silent pass |
+| Bespoke assets | Rodin | Tripo (metered) | library or procedural substitute | flag Elmer before any new subscription spend |
+
+Two constraints hold across every substitution. The fidelity critic's vendor must still differ from the author's, so when Opus authors, the experience critic drops to the third option or is skipped. A fallback that has never passed the role's frozen cases can only be used for a work order marked "any qualified or unqualified worker", and the result is reviewed by Elmer before it is accepted.
 
 ### Resource pools
 
@@ -141,7 +158,20 @@ The know-how for each craft (reference analysis, camera and scale fitting, archi
 
 **The controller** is a Python program with no model inside it. It reads the ledger, finds tasks whose inputs are all accepted, reserves resources, launches the command for each, enforces budgets and retry limits, re-runs acceptance commands, and writes what happened. It never judges quality. It is `conduct.py` promoted from one room to a property.
 
-**The lead model** is a model session the controller invokes in three situations only: a task has failed two corrections; a brief contains something no recipe covers; a worker proposed a workflow change that needs a decision. It writes a reassessment (what was disproved, what remains plausible, what new evidence or method is needed) and a new bounded work order. It does not run the line and is never in a live monitoring loop.
+**The lead model** is a model session the controller invokes in three situations only: the correction loop below has stopped; a brief contains something no recipe covers; a worker proposed a workflow change that needs a decision. It writes a reassessment (what was disproved, what remains plausible, what new evidence or method is needed) and a new bounded work order. It does not run the line and is never in a live monitoring loop.
+
+### The correction loop
+
+Each task has a primary metric (fit error, ΔE, luminance gap, sabotage catch, fps). After a failed check the controller compares the metric with the previous round and decides:
+
+| Round result | Action |
+|---|---|
+| Metric improved and criteria still unmet | another round, up to **five** rounds in total |
+| Metric unchanged or worse | count as a failed correction; **two** failed corrections stop the task |
+| Metric improved but the improvement is below the task's minimum step | count as failed; small drifts do not buy rounds |
+| Any round | the worker's effort setting rises one step per round, capped at the role's maximum, and is recorded on the attempt |
+
+A stopped task goes to the lead model. The five-round ceiling is a budget guard, not a target: most tasks should pass in one or two. Every round's metric, effort and cost go in the ledger so the evaluator can see whether the extra rounds and effort were worth it.
 
 ### Who checks, who diagnoses, who fixes
 
@@ -149,9 +179,9 @@ The know-how for each craft (reference analysis, camera and scale fitting, archi
 |---|---|
 | Did the task meet its criteria? | Never the worker that did it. The controller re-runs deterministic checks. A critic on a different vendor, in fresh context, seeing only the frozen packet, judges appearance. |
 | What went wrong? | The critic names the single biggest violation with evidence (view, measurement, criterion). It does not propose a fix. |
-| Who fixes it? | Attempts 1 and 2: the same worker, given the critic's findings. After two failed corrections the task stops and goes to the lead model. |
+| Who fixes it? | The same worker, given the critic's findings, at one effort step higher each round, under the correction loop above. When the loop stops, the lead model. |
 | Who decides the method change? | The lead model proposes; the controller dispatches; Elmer is consulted only if scope or spend above threshold changes. |
-| Can a critic gate a release? | Not until it is calibrated: it must catch most seeded sabotages on a clean set that already passes checklist lines 1–3. Cameras are gated by geometry, never by a critic. |
+| Can a critic gate a release? | Only after it has proved it can see defects. The test: take a render that already passes the basic checks, break it on purpose in known ways (raise the ceiling 15 %, remove the wardrobe, mirror the bed, turn the camera 10°), and ask the critic what is wrong. In bedroom-A the critics found 12–17 % of those planted defects, and one called a 10° camera error "good". Until a critic finds most planted defects, its verdict is advice, not a gate. Camera placement is always checked by geometry (fit error, edge score), never by a critic. |
 
 ### Rules the line enforces
 
@@ -160,10 +190,11 @@ The know-how for each craft (reference analysis, camera and scale fitting, archi
 - Children receive only the hashed note; isolation probes (loaded skills, env keys, secret nonce) run on every dispatch.
 - Third-party generation needs `--confirm-spend`; at most two charged attempts per asset; provider job ID saved before polling so a crash never buys the same generation twice.
 - Service failures retry separately from quality failures.
-- Subscription exhaustion pauses the worker. Never silently switch to API billing. OpenRouter only for Gemini and allow-listed open-weights models; Claude in Max; Astra only through Codex.
+- **Where each model may run.** Claude models only through the Claude Max subscription: Claude Code, headless `claude -p`, or an Orca-launched Claude Code session. Never the Anthropic API. Astra and the other GPT models only through Codex signed in to the ChatGPT Pro subscription. Never the OpenAI API, even though Codex accepts an API key. Gemini, Jev and allow-listed open-weights models run on pay-as-you-go keys inside the €150 envelope; OpenRouter only for Gemini and those open-weights models.
+- **Usage windows.** Both subscriptions meter usage in five-hour windows and can run out mid-task. Two rules follow. Before any dispatch the controller commits the repo and writes a checkpoint; a running worker commits at least every 20 minutes and after every completed acceptance command, so a killed session loses at most one step. When a pool runs out, the work order moves to "waiting for provider", the fallback chain in section 3 is consulted, and if no fallback applies the controller re-checks the pool every 30 minutes and resumes from the last checkpoint (`claude --resume`, `codex resume`, or a fresh dispatch of the same note) when the window reopens. Never silently switch to API billing.
 - Silent fallbacks are the costliest failures (Cycles on CPU, rate limits). Every run writes a ledger row with pool, seconds, cost and the primary metric; a heartbeat loss means "unconfirmed", not "failed".
 - One metric anchor and one chirality sentence per room before the shell is built. Clean the crop before any generation spend.
-- After two failed corrections, the next attempt requires new evidence or a changed method.
+- When the correction loop stops, the next attempt requires new evidence or a changed method.
 
 States shown distinctly: waiting for dependencies, ready, executing, waiting for provider or resource, awaiting review, accepted, needs revision, failed, cancelled, superseded. "Waiting for approved shell", "waiting for GPU" and "waiting for Rodin" are different conditions, not one "blocked".
 
@@ -177,11 +208,15 @@ No custom dashboard. Three pieces cover the need to understand the plan and see 
 
 Closing any of these must not stop production. Nothing in them can dispatch work or approve results.
 
+**Orca** is the window on the agents. Elmer runs the conductor session in Orca and, where Orca can launch a child with the HANDOFF note as its entire prompt, the author and reviewer sessions too, so every running agent is visible side by side. Orca is a launcher and a viewer, not a record: the ledger stays authoritative, the note and the isolation probes still apply to every child, and where Orca cannot launch a child headlessly with the same isolation the controller launches the CLI directly and Orca shows only the conductor. Orca's own task and dependency features are marked experimental by its authors and are not used for factory state.
+
 ## 6. Evaluator role
 
 A dedicated role with its own task definitions and budget, run by the controller on triggers, not a standing agent. Its output is a recommendation; promotion is a separate decision.
 
-**Triggers:** monthly during active production; immediately after a new model release, a deprecation, a compatibility change or a production regression.
+**Trigger:** monthly, and only monthly. A production regression is handled by the correction loop and the lead model, not by the evaluator.
+
+**How it learns about releases.** Elmer does not have to tell it. The first step of every monthly run is a release scan: a script fetches the vendors' published model lists and changelogs (OpenAI, Anthropic, Google, TypeSafe, Rodin, Tripo, Meshy), diffs them against the candidate registry, and writes the additions, deprecations and pricing changes into the evaluator's work order. The evaluator reads the model cards for anything new and decides what enters the frozen-case stage. Elmer can add a candidate to the registry by hand at any time; it is picked up at the next monthly run. The monthly run is the only recurring automation in this plan.
 
 **What is evaluated:** a whole configuration, `model + effort + prompt + skill + tools + limits`. Effort names are not comparable across models; a fresh effort sweep is needed per model. A smaller model is not automatically cheaper per accepted task.
 
@@ -203,7 +238,7 @@ Add held-out cases (six previously unused, including another property) only once
 
 **Budget.** €15 a month cash within the existing €150 additional-spend ceiling, and 10 % of agent execution time, tracked per pool. Stop when either is exhausted; leave the candidate unqualified. Investment test: a €12 evaluation that saves €0.40 per accepted task breaks even after 30 tasks; where the saving is subscription capacity, report saved time separately.
 
-**Current queue.** GPT-6 Sol and Claude Opus 5.5 (both reported released 22 September 2026; not independently verified here) enter as candidates for the author role at medium effort against the recorded Sonnet baseline; low effort tested on the winner; effort raised only when failures show insufficient reasoning. The open Fable-versus-Astra question for conducting is settled the same way on the frozen cases, not by preference. Jev's rejected status-audit gate is re-evaluated only under policy v2 with the multi-file deliverable fix.
+**Current queue.** GPT-6 Sol and Claude Opus 5.5 (both reported released 22 September 2026; not independently verified here) enter as candidates. Astra is the author by decision; the evaluator's job is to confirm Opus 5.5 and Sonnet 5 as its fallbacks on the frozen cases at medium effort, and to test Sol as a cheaper author for routine repairs. The Fable-versus-Astra question for conducting is settled the same way on the frozen cases, not by preference. Jev's rejected status-audit gate is re-evaluated only under policy v2 with the multi-file deliverable fix.
 
 **Jev is not a foundation.** It is a candidate for narrow typed judgements over text: converting critic prose to structured verdicts, classifying failure causes, gating on stated thresholds. It reads no images and it missed the one real mislabel in bedroom-A. Every gate it takes must pass the adoption rule: accuracy at or above the code path at ≥ 85 % coverage, not Pareto-dominated, a no-match outcome, respects the failure taxonomy.
 
@@ -215,7 +250,7 @@ Ordered by what unblocks the most. The factory is not built ahead of a room that
 2. **Bathroom as the hard case.** Tile, glass, mirrors through the same scripts. Bedroom B camera fit and critic round as regression.
 3. **Promote the controller.** `conduct.py` and `matrix.csv` become a property-level controller with the SQLite ledger, resource reservations, provider-job persistence and the Linear sync. Task definitions and skills move to versioned files; the plan view renders from them.
 4. **Connected suite pilot.** Three rooms and the corridor through the controller, end to end, measured: bake hours per room, tokens per pool, credits, wall clock, corrections, which pool hit a window. Release only against the pass bar in section 1, judged in the delivered browser with close, reverse and moving views.
-5. **Evaluator on the pilot's cases.** First comparisons: author role (Sonnet baseline vs Sol vs Opus 5.5; Astra when credits return), conductor (Fable vs Astra), critic (Flash ×3 vs Pro), Jev policy v2.
+5. **Evaluator on the pilot's cases.** First comparisons: author role (Astra primary; Opus 5.5 and Sonnet 5 as fallbacks; Sol for routine repairs), conductor (Fable vs Astra), critic (Flash ×3 vs Pro), Jev policy v2.
 6. **Second property.** Demonstrate reuse of recipes and assets, scheduling across resource pools, recovery from a crash, and the true cost and time per accepted property, before any claim about 5–10 properties a month.
 
 **Acceptance for the factory itself:**
@@ -223,7 +258,9 @@ Ordered by what unblocks the most. The factory is not built ahead of a room that
 - A task can be traced from source hashes through its note, attempt and accepted output.
 - Independent work runs concurrently; dependent work waits on the right condition, shown distinctly.
 - A crash or reconnect never duplicates a paid job.
-- Failed attempts stay inspectable; after two failed corrections the next attempt carries new evidence or a changed method.
+- Failed attempts stay inspectable; when the correction loop stops, the next attempt carries new evidence or a changed method.
+- A pool running out never loses more than one step of work, and the work order resumes without Elmer once the window reopens.
+- Every model role has a recorded fallback chain, and a substitution is visible on the attempt.
 - Changing an input identifies and invalidates exactly the affected outputs.
 - A restart reconstructs status from the ledger; missing telemetry is visible, not hidden.
 - Nothing in the plan view or Linear can dispatch work or approve results.
