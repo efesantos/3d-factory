@@ -91,10 +91,10 @@ A worker is a role with a written method, limited inputs and outputs, allowed to
 
 | Role | Primary | Why this one | Boundary |
 |---|---|---|---|
-| Conductor | Claude Fable in Claude Code, running `conduct.py` | Bedroom-A's conductor already works on it; Claude Max is the pool with the most headroom for long sessions; keeps the ChatGPT pool free for authoring | plans, dispatches, re-runs acceptance, merges. Never authors geometry. |
+| Conductor | Claude Fable in Claude Code, running `conduct.py` | Bedroom-A's `conduct.py` is built on Claude Code (subagents, `claude -p` harness); the conductor is a long-lived session that consumes tokens all day, and in Amsteldijk that kind of loop ate 44 % of the ChatGPT pool that the author needs. Putting the conductor in the Claude pool and the author in the ChatGPT pool means neither can starve the other | plans, dispatches, re-runs acceptance, merges. Never authors geometry. |
 | Author (Blender recipes, shell, repairs) | Codex Astra (`harness.json` → `codex-astra`) | best-documented procedural Blender author and self-reviewer; strongest published 3D-reconstruction score (BenchCAD, vendor-reported); Elmer's decision | receives only a hashed HANDOFF note; runs acceptance commands; never grades quality; never calls a network API |
 | Fidelity critic | Gemini 3.8 Flash ×3 (lines 1–3); Gemini 3.1 Pro (line 4 materials, detail crops) | on the bedroom-A matrix Flash dominated every other critic on cost, speed and valid answers (US$0.005, 10 s, 77 % consistency); Pro found the most line-4 material defects; different vendor from every author | sees only a frozen packet; never a camera gate |
-| Experience critic | Opus 5.5 in fresh context | strongest reasoning in the Claude pool for judging movement and composition; fresh context guarantees it never saw the build | second opinion on movement, close and reverse views |
+| Experience critic | Fable in fresh context | the most capable model available on a subscription Elmer already pays for, and a critique is one bounded call so its cost is small; must be a different vendor from the author (Astra), which rules out Sol and Astra; fresh context means it never saw the build even though the same model conducts. Bedroom-A showed every model critic missing planted defects, so capability here is unproven value: the evaluator tests Fable against Opus 5.5 on the sabotage set | second opinion on movement, close and reverse views |
 | Conformance reviewer | Codex Astra at max effort; headless Claude as fallback | the rubric is a bounded, one-shot audit of records, which is the shape Astra does well without a monitoring loop | eleven-item rubric over the note, report, verification record and matrix row; no renders, no chat history |
 | Structured judgement | Jev (TypeSafe) on its four adopted gates: alias, class, height band, handoff-note prose | passed the adoption rule on verified truth (0.89–1.00 accuracy); 0.28 s and a fraction of a cent per call | text only; rejected for evidence-status audit; every new gate must pass the adoption rule |
 | Vision inventory | Gemini 3.8 Flash | accepts images and video at low cost; adequate for inventory, not for defect detection | observations are evidence-linked proposals, never approvals |
@@ -112,13 +112,17 @@ Every model role has an ordered fallback list. The controller moves down the lis
 
 | Role | 1st | 2nd | 3rd | If none available |
 |---|---|---|---|---|
-| Author | Codex Astra (ChatGPT Pro via Codex) | Opus 5.5 (Claude Max via `claude -p`) | Sonnet 5 (Claude Max; the recorded bedroom-A baseline) | pause the work order; flag Elmer with the task and the pool that ran out |
+| Author | Codex Astra (ChatGPT Pro via Codex) | Opus 5.5 (Claude Max via `claude -p`) | Sol 6 (Codex) once it passes the frozen cases; until then Sonnet 5 (Claude Max; the recorded bedroom-A baseline) | pause the work order; flag Elmer with the task and the pool that ran out |
 | Conductor | Fable (Claude Max) | Opus 5.5 (Claude Max) | Astra in Codex, bounded to the current milestone only | pause; nothing dispatches without a conductor |
+
+Why Opus 5.5 sits ahead of Astra for conducting even though Astra is the more capable model: the conductor and the author must not share a pool. If Fable is out, the Claude pool may still have Opus; moving the conductor to Codex would put it in the same five-hour window as the author, which is the Amsteldijk failure. Astra conducts only as a last resort and only to finish the current milestone.
 | Fidelity critic | Gemini 3.8 Flash via native key | Gemini 3.8 Flash via OpenRouter | Gemini 3.1 Pro | pause review; never fall back to the author's vendor |
-| Experience critic | Opus 5.5 | Fable | Astra (only when the author is Claude) | skip the second opinion, record it as missing |
+| Experience critic | Fable | Opus 5.5 | Gemini 3.1 Pro; Sol or Astra only when the author is a Claude model | skip the second opinion, record it as missing |
 | Conformance | Astra at max | headless Claude (Opus 5.5) | Sonnet 5 | milestone stays "awaiting review" |
 | Structured judgement | Jev | static code path for that gate | escalate the item | the gate reports "no match", never a silent pass |
 | Bespoke assets | Rodin | Tripo (metered) | library or procedural substitute | flag Elmer before any new subscription spend |
+
+The order in each chain follows three rules, in priority: the fallback must be in a different pool from the one that just ran out (a ChatGPT-pool exhaustion makes Sol as unavailable as Astra, so the next option must be a Claude model); it must keep vendor separation from the author; among the rest, the one that has passed the role's frozen cases ranks above a more capable model that has not. Reputation alone never orders a chain. Sol 6 is likely stronger than Sonnet 5 for authoring and will move ahead of it the moment it passes the frozen cases; it can only ever be reached when Astra is unavailable for a reason other than pool exhaustion, such as Astra-specific credits.
 
 Two constraints hold across every substitution. The fidelity critic's vendor must still differ from the author's, so when Opus authors, the experience critic drops to the third option or is skipped. A fallback that has never passed the role's frozen cases can only be used for a work order marked "any qualified or unqualified worker", and the result is reviewed by Elmer before it is accepted.
 
@@ -214,9 +218,9 @@ Closing any of these must not stop production. Nothing in them can dispatch work
 
 A dedicated role with its own task definitions and budget, run by the controller on triggers, not a standing agent. Its output is a recommendation; promotion is a separate decision.
 
-**Trigger:** monthly, and only monthly. A production regression is handled by the correction loop and the lead model, not by the evaluator.
+**Cadence:** a **weekly** release scan and evidence screen, which is cheap (a script plus one short model call), and frozen-case comparisons **whenever the scan finds a credible candidate**, paid from the monthly budget below. Weekly keeps the registry current without spending on comparisons nobody asked for. A production regression is handled by the correction loop and the lead model, not by the evaluator.
 
-**How it learns about releases.** Elmer does not have to tell it. The first step of every monthly run is a release scan: a script fetches the vendors' published model lists and changelogs (OpenAI, Anthropic, Google, TypeSafe, Rodin, Tripo, Meshy), diffs them against the candidate registry, and writes the additions, deprecations and pricing changes into the evaluator's work order. The evaluator reads the model cards for anything new and decides what enters the frozen-case stage. Elmer can add a candidate to the registry by hand at any time; it is picked up at the next monthly run. The monthly run is the only recurring automation in this plan.
+**How it learns about releases.** Elmer does not have to tell it. The weekly run is a release scan: a script fetches the vendors' published model lists and changelogs (OpenAI, Anthropic, Google, TypeSafe, Rodin, Tripo, Meshy), diffs them against the candidate registry, and writes the additions, deprecations and pricing changes into the evaluator's work order. The evaluator reads the model cards for anything new and decides what enters the frozen-case stage. Elmer can add a candidate to the registry by hand at any time; it is picked up at the next weekly run. The weekly scan is the only recurring automation in this plan.
 
 **What is evaluated:** a whole configuration, `model + effort + prompt + skill + tools + limits`. Effort names are not comparable across models; a fresh effort sweep is needed per model. A smaller model is not automatically cheaper per accepted task.
 
